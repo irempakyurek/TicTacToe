@@ -2,6 +2,8 @@ package com.example.team.tictactoe;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -21,17 +23,27 @@ public class MainActivity extends AppCompatActivity {
     static final byte PLAYER_1_VALUE = 1;
     static final byte PLAYER_2_VALUE = 2;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        TableLayout table = findViewById(R.id.board);
+        TableLayout table = findViewById(R.id.table);
         for (int i = 0; i < 3; i++) {
             TableRow row = (TableRow) table.getChildAt(i);
             for (int j = 0; j < 3; j++) {
                 Button btn = (Button) row.getChildAt(j);
                 btn.setOnClickListener(new CellListener(i, j));
+            }
+        }
+        if (savedInstanceState != null) {
+            player1Turn = savedInstanceState.getBoolean("turn");
+            byte[] arr = savedInstanceState.getByteArray("board");
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    board[i][j] = arr[i * 3 + j];
+                }
             }
         }
 
@@ -62,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
                 playerValue = PLAYER_2_VALUE;
 
             }
-            player1Turn = !player1Turn;
+            player1Turn =! player1Turn;
             int gameState = gameEnded(row, col, playerValue);
             if (gameState > 0) {
                 Toast.makeText(MainActivity.this, "Player " + gameState + " has won!", Toast.LENGTH_SHORT).show();
@@ -110,6 +122,8 @@ public class MainActivity extends AppCompatActivity {
         if (win)
             return playerValue;
 
+
+        //to check
         win = true;
         for (int i = 0, j = 2; i < 3 && j >= 0; i++, j--) {
             if (board[i][j] != playerValue) {
@@ -125,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void setBoardEnabled(boolean enable) {
-        TableLayout table = findViewById(R.id.board);
+        TableLayout table = findViewById(R.id.table);
         for (int i = 0; i < 3; i++) {
             TableRow row = (TableRow) table.getChildAt(i);
             for (int j = 0; j < 3; j++) {
@@ -148,7 +162,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        TableLayout table = findViewById(R.id.board);
+        TableLayout table = findViewById(R.id.table);
         for (int i = 0; i < 3; i++) {
             TableRow row = (TableRow) table.getChildAt(i);
             for (int j = 0; j < 3; j++) {
@@ -156,7 +170,76 @@ public class MainActivity extends AppCompatActivity {
                 btn.setText("");
             }
         }
+
         setBoardEnabled(true);
+        return true;
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState){
+        super.onSaveInstanceState(outState);
+        outState.putByteArray("board",toArray(board));
+        outState.putBoolean("turn",player1Turn);
+    }
+    private byte[] toArray(byte[][] matrix) {
+        int row = matrix.length;
+        int col = matrix[0].length;
+        byte[] arr = new byte[row * col];
+
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                arr[i * 3 + j] = board[i][j];
+            }
+        }
+        return arr;
+
+    }
+    public boolean saveGame(MenuItem item) {
+        SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+
+        long b = 0;
+
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                b += (long) (board[i][j] * Math.pow(10, i * 3 + j));
+            }
+        }
+
+        editor.putLong("board", b);
+        editor.putBoolean("turn", player1Turn);
+        editor.commit();
+
+        return true;
+    }
+    public boolean loadGame(MenuItem item) {
+        SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
+        player1Turn = preferences.getBoolean("turn", true);
+        long b = preferences.getLong("board", 0);
+
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                board[i][j] = (byte) ((b / Math.pow(10, i * 3 + j)) % 10);
+            }
+        }
+
+        //update the button labels
+        TableLayout table = findViewById(R.id.table);
+        for (int i = 0; i < 3; i++) {
+            TableRow row = (TableRow) table.getChildAt(i);
+            for (int j = 0; j < 3; j++) {
+                Button btn = (Button) row.getChildAt(j);
+                switch (board[i][j]) {
+                    case 0: btn.setText("");
+                        break;
+                    case 1: btn.setText(PLAYER_1_SYMBOL);
+                        break;
+                    case 2: btn.setText(PLAYER_2_SYMBOL);
+                        break;
+                }
+            }
+        }
+
         return true;
     }
 }
